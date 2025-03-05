@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometric Shape Editor</title>
+    <style>
+        /* CSS Reset for consistent rendering across browsers */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Main layout - full viewport height with flex column layout */
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header styling for application title */
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Three-panel layout container with flexbox */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left panel for shape templates */
+        .left-panel {
+            width: 20%;
+            background-color: #f0f0f0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            border-right: 1px solid #ccc;
+            overflow-y: auto;
+        }
+
+        /* Common panel header styling */
+        .panel-title {
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* Container for draggable shape templates - modified for 2-column layout */
+        .shape-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* Draggable item styling with visual feedback on hover/drag */
+        .draggable {
+            cursor: grab;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, opacity 0.2s;
+            height: 90px;
+        }
+
+        /* Scale effect on hover for draggable items */
+        .draggable:hover {
+            transform: scale(1.05);
+        }
+
+        /* Visual feedback during active dragging */
+        .draggable:active {
+            cursor: grabbing;
+            opacity: 0.8;
+        }
+
+        /* Circle shape template styling */
+        .circle-template {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #ff6b6b;
+            border: 2px solid #333;
+        }
+
+        /* Square shape template styling */
+        .square-template {
+            width: 60px;
+            height: 60px;
+            background-color: #4ecdc4;
+            border: 2px solid #333;
+        }
+
+        /* Rectangle shape template styling */
+        .rectangle-template {
+            width: 70px;
+            height: 40px;
+            background-color: #73d2de;
+            border: 2px solid #333;
+        }
+
+        /* Triangle shape template using CSS borders technique */
+        .triangle-template {
+            width: 0;
+            height: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-bottom: 60px solid #ffd166;
+        }
+
+        /* Pentagon shape template styling */
+        .pentagon-template {
+            width: 60px;
+            height: 60px;
+            background-color: #9a8cff;
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+        }
+
+        /* Hexagon shape template styling */
+        .hexagon-template {
+            width: 60px;
+            height: 60px;
+            background-color: #56ab2f;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+        }
+
+        /* Star shape template styling */
+        .star-template {
+            width: 60px;
+            height: 60px;
+            background-color: #fed766;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+        }
+
+        /* Oval shape template styling */
+        .oval-template {
+            width: 70px;
+            height: 45px;
+            background-color: #ef476f;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+
+        /* Diamond shape template styling */
+        .diamond-template {
+            width: 60px;
+            height: 60px;
+            background-color: #06d6a0;
+            transform: rotate(45deg);
+        }
+
+        /* Arrow shape template styling */
+        .arrow-template {
+            width: 60px;
+            height: 20px;
+            background-color: #118ab2;
+            position: relative;
+        }
+        .arrow-template:after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 0;
+            height: 0;
+            border-left: 30px solid #118ab2;
+            border-top: 25px solid transparent;
+            border-bottom: 25px solid transparent;
+        }
+
+        /* Center workspace container */
+        .workspace {
+            flex: 1;
+            background-color: #fff;
+            position: relative;
+            overflow: auto;
+        }
+
+        /* Grid background for workspace to aid positioning */
+        .workspace-grid {
+            width: 100%;
+            height: 100%;
+            background-size: 20px 20px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+        }
+
+        /* Right properties panel */
+        .right-panel {
+            width: 25%;
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-left: 1px solid #ccc;
+            overflow-y: auto;
+        }
+
+        /* Properties panels hidden by default until a shape is selected */
+        .properties-panel {
+            display: none;
+        }
+
+        /* Property grouping for organization */
+        .property-group {
+            margin-bottom: 15px;
+        }
+
+        /* Row layout for property label and input pairs */
+        .property-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        /* Property label styling */
+        .property-label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        /* Input field styling for properties */
+        input[type="number"], input[type="color"] {
+            width: 60%;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        
+        /* Style for shapes in the workspace */
+        .shape-instance {
+            position: absolute;
+            cursor: move;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Geometric Shape Editor</h1>
+        <div>
+            <button id="save-btn">Save</button>
+            <button id="clear-btn">Clear</button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <!-- Left panel with shape templates -->
+        <div class="left-panel">
+            <h2 class="panel-title">Shapes</h2>
+            <div class="shape-container">
+                <!-- 10 different shapes in a 2-column grid -->
+                <div class="draggable" draggable="true" data-shape="circle">
+                    <div class="circle-template"></div>
+                </div>
+                <div class="draggable" draggable="true" data-shape="square">
+                    <div class="square-template"></div>
+                </div>
+                <div class="draggable" draggable="true" data-shape="rectangle">
+                    <div class="rectangle-template"></div>
+                </div>
+                <div class="draggable" draggable="true" data-shape="triangle">
+                    <div class="triangle-template"></div>
+                </div>
+                <div class="draggable" draggable="true" data-shape="pentagon">
+                    <div class="pentagon-template"></div>
+                </div>
+                <div class="draggable" draggable="true" data-shape="hexagon">
+                    <div class="hexagon-template"></div>
+                </div>
+                <div class="draggable" draggable="true" data-shape="star">
+                    <div class="star-template"></div>
+                </div>
+                <div class="draggable" draggable="true" data-shape="oval">
+                    <div class="oval-template"></div>
+                </div>
+                <div class="draggable" draggable="true" data-shape="diamond">
+                    <div class="diamond-template"></div>
+                </div>
+                <div class="draggable" draggable="true" data-shape="arrow">
+                    <div class="arrow-template"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Center workspace -->
+        <div class="workspace">
+            <div class="workspace-grid" id="workspace"></div>
+        </div>
+        
+        <!-- Right panel for properties -->
+        <div class="right-panel">
+            <h2 class="panel-title">Properties</h2>
+            
+            <!-- No shape selected message -->
+            <div id="no-selection">
+                <p>Select a shape to edit its properties</p>
+            </div>
+            
+            <!-- Properties panel for different shapes - shown when shape is selected -->
+            <div id="shape-properties" class="properties-panel">
+                <div class="property-group">
+                    <h3>Position</h3>
+                    <div class="property-row">
+                        <label class="property-label">X:</label>
+                        <input type="number" id="position-x">
+                    </div>
+                    <div class="property-row">
+                        <label class="property-label">Y:</label>
+                        <input type="number" id="position-y">
+                    </div>
+                </div>
+                
+                <div class="property-group">
+                    <h3>Size</h3>
+                    <div class="property-row">
+                        <label class="property-label">Width:</label>
+                        <input type="number" id="size-width">
+                    </div>
+                    <div class="property-row">
+                        <label class="property-label">Height:</label>
+                        <input type="number" id="size-height">
+                    </div>
+                </div>
+                
+                <div class="property-group">
+                    <h3>Style</h3>
+                    <div class="property-row">
+                        <label class="property-label">Fill Color:</label>
+                        <input type="color" id="fill-color">
+                    </div>
+                    <div class="property-row">
+                        <label class="property-label">Border Color:</label>
+                        <input type="color" id="border-color">
+                    </div>
+                    <div class="property-row">
+                        <label class="property-label">Border Width:</label>
+                        <input type="number" id="border-width" min="0" max="10">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const workspace = document.getElementById('workspace');
+            const draggables = document.querySelectorAll('.draggable');
+            
+            // Global variables for tracking
+            let shapeCounter = 0;
+            let selectedShape = null;
+            let isDraggingNewShape = false;
+            
+            // Initialize property fields
+            const positionX = document.getElementById('position-x');
+            const positionY = document.getElementById('position-y');
+            const sizeWidth = document.getElementById('size-width');
+            const sizeHeight = document.getElementById('size-height');
+            const fillColor = document.getElementById('fill-color');
+            const borderColor = document.getElementById('border-color');
+            const borderWidth = document.getElementById('border-width');
+            
+            // Add event listeners to property fields
+            positionX.addEventListener('change', updateSelectedShape);
+            positionY.addEventListener('change', updateSelectedShape);
+            sizeWidth.addEventListener('change', updateSelectedShape);
+            sizeHeight.addEventListener('change', updateSelectedShape);
+            fillColor.addEventListener('change', updateSelectedShape);
+            borderColor.addEventListener('change', updateSelectedShape);
+            borderWidth.addEventListener('change', updateSelectedShape);
+            
+            // Update shape based on property changes
+            function updateSelectedShape() {
+                if (!selectedShape) return;
+                
+                // Update position
+                selectedShape.style.left = positionX.value + 'px';
+                selectedShape.style.top = positionY.value + 'px';
+                
+                // Update size - complicated by the fact that different shapes have different sizing models
+                const shapeType = selectedShape.dataset.shapeType;
+                if (shapeType === 'triangle') {
+                    // Special case for triangle (which uses border width tricks)
+                    // We won't implement full triangle resizing in this example
+                } else {
+                    selectedShape.style.width = sizeWidth.value + 'px';
+                    selectedShape.style.height = sizeHeight.value + 'px';
+                }
+                
+                // Update colors
+                selectedShape.style.backgroundColor = fillColor.value;
+                selectedShape.style.borderColor = borderColor.value;
+                selectedShape.style.borderWidth = borderWidth.value + 'px';
+            }
+            
+            // Function to create shapes on the workspace
+            function createShape(type, x, y) {
+                const shape = document.createElement('div');
+                shape.className = type + '-template shape-instance';
+                shape.style.position = 'absolute';
+                shape.style.left = x + 'px';
+                shape.style.top = y + 'px';
+                
+                // Assign unique ID to each shape
+                shape.id = 'shape-' + shapeCounter++;
+                shape.dataset.shapeType = type;
+                
+                // Make shapes draggable within workspace
+                shape.draggable = true;
+                
+                // Add selection functionality
+                shape.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Prevent workspace from deselecting
+                    selectShape(this);
+                });
+                
+                // Set up drag functionality for the shape
+                setupDragForShape(shape);
+                
+                workspace.appendChild(shape);
+                return shape;
+            }
+            
+            // Function to set up drag behavior for shapes
+            function setupDragForShape(shape) {
+                shape.addEventListener('dragstart', function(e) {
+                    const rect = this.getBoundingClientRect();
+                    const workspaceRect = workspace.getBoundingClientRect();
+                    
+                    // Calculate offset relative to the shape
+                    const offsetX = e.clientX - rect.left;
+                    const offsetY = e.clientY - rect.top;
+                    
+                    // Store information for drag operation
+                    e.dataTransfer.setData('application/json', JSON.stringify({
+                        id: this.id,
+                        type: 'move-shape',
+                        offsetX: offsetX,
+                        offsetY: offsetY
+                    }));
+                    
+                    // Auto-select the shape being dragged
+                    selectShape(this);
+                });
+            }
+            
+            // Function to select a shape
+            function selectShape(shape) {
+                // Deselect previous shape
+                if (selectedShape) {
+                    selectedShape.style.outline = 'none';
+                }
+                
+                // Highlight the selected shape
+                selectedShape = shape;
+                shape.style.outline = '2px solid blue';
+                shape.style.outlineOffset = '2px';
+                
+                // Show properties for the selected shape
+                document.getElementById('no-selection').style.display = 'none';
+                document.getElementById('shape-properties').style.display = 'block';
+                
+                // Populate properties panel with shape details
+                updatePropertiesPanel(shape);
+            }
+            
+            // Function to update properties panel with shape details
+            function updatePropertiesPanel(shape) {
+                // Get current shape properties
+                const rect = shape.getBoundingClientRect();
+                
+                // Position relative to workspace
+                const x = parseInt(shape.style.left);
+                const y = parseInt(shape.style.top);
+                
+                // Size - depends on shape type
+                const width = rect.width;
+                const height = rect.height;
+                
+                // Update form fields
+                positionX.value = x;
+                positionY.value = y;
+                sizeWidth.value = width;
+                sizeHeight.value = height;
+                
+                // Get computed style for colors
+                const computedStyle = window.getComputedStyle(shape);
+                fillColor.value = rgbToHex(computedStyle.backgroundColor);
+                borderColor.value = rgbToHex(computedStyle.borderColor);
+                borderWidth.value = parseInt(computedStyle.borderWidth) || 0;
+            }
+            
+            // Helper function to convert RGB to HEX for color inputs
+            function rgbToHex(rgb) {
+                // Default to black if no color
+                if (!rgb || rgb === 'transparent' || rgb === 'none') return '#000000';
+                
+                // Check if it's already a hex color
+                if (rgb.startsWith('#')) return rgb;
+                
+                // Convert rgb(r, g, b) format to hex
+                const rgbMatch = rgb.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+                if (rgbMatch) {
+                    return '#' + 
+                        ('0' + parseInt(rgbMatch[1], 10).toString(16)).slice(-2) +
+                        ('0' + parseInt(rgbMatch[2], 10).toString(16)).slice(-2) +
+                        ('0' + parseInt(rgbMatch[3], 10).toString(16)).slice(-2);
+                }
+                
+                return '#000000'; // Fallback
+            }
+            
+            // Drag and drop functionality for shape templates
+            draggables.forEach(draggable => {
+                draggable.addEventListener('dragstart', function(e) {
+                    const shapeType = this.getAttribute('data-shape');
+                    e.dataTransfer.setData('application/json', JSON.stringify({
+                        type: 'new-shape',
+                        shapeType: shapeType
+                    }));
+                    
+                    isDraggingNewShape = true;
+                });
+            });
+            
+            // Handle dragover on the workspace
+            workspace.addEventListener('dragover', function(e) {
+                e.preventDefault(); // Allow drop
+            });
+            
+            // Handle drops on the workspace
+            workspace.addEventListener('drop', function(e) {
+                e.preventDefault();
+                
+                try {
+                    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+                    
+                    if (data.type === 'move-shape') {
+                        // Moving an existing shape
+                        const element = document.getElementById(data.id);
+                        
+                        if (element) {
+                            const rect = workspace.getBoundingClientRect();
+                            element.style.left = (e.clientX - rect.left - data.offsetX) + 'px';
+                            element.style.top = (e.clientY - rect.top - data.offsetY) + 'px';
+                            
+                            // Update properties if this is the selected shape
+                            if (selectedShape === element) {
+                                updatePropertiesPanel(element);
+                            }
+                        }
+                    } else if (data.type === 'new-shape') {
+                        // Creating a new shape from left panel
+                        const rect = workspace.getBoundingClientRect();
+                        const newShape = createShape(
+                            data.shapeType, 
+                            e.clientX - rect.left - 30, // Approximate center of shape
+                            e.clientY - rect.top - 30  // Approximate center of shape
+                        );
+                        
+                        // Automatically select the new shape
+                        selectShape(newShape);
+                    }
+                } catch (error) {
+                    console.error("Error handling drop:", error);
+                }
+                
+                isDraggingNewShape = false;
+            });
+            
+            // Clear workspace functionality
+            document.getElementById('clear-btn').addEventListener('click', function() {
+                const shapes = workspace.querySelectorAll('.shape-instance');
+                shapes.forEach(shape => shape.remove());
+                
+                // Reset properties panel and selection
+                document.getElementById('no-selection').style.display = 'block';
+                document.getElementById('shape-properties').style.display = 'none';
+                selectedShape = null;
+                shapeCounter = 0;
+            });
+            
+            // Save functionality (for demonstration - would typically save to a server)
+            document.getElementById('save-btn').addEventListener('click', function() {
+                const shapes = workspace.querySelectorAll('.shape-instance');
+                const saveData = Array.from(shapes).map(shape => {
+                    const rect = shape.getBoundingClientRect();
+                    const computedStyle = window.getComputedStyle(shape);
+                    
+                    return {
+                        id: shape.id,
+                        type: shape.dataset.shapeType,
+                        x: parseInt(shape.style.left),
+                        y: parseInt(shape.style.top),
+                        width: rect.width,
+                        height: rect.height,
+                        fillColor: rgbToHex(computedStyle.backgroundColor),
+                        borderColor: rgbToHex(computedStyle.borderColor),
+                        borderWidth: parseInt(computedStyle.borderWidth) || 0
+                    };
+                });
+                
+                // For demonstration - log the save data to console
+                console.log('Saved data:', saveData);
+                alert('Design saved! (Check console for data)');
+            });
+            
+            // Deselect when clicking on empty workspace area
+            workspace.addEventListener('click', function(e) {
+                // Only deselect if clicking directly on the workspace (not on a shape)
+                if (e.target === workspace || e.target === document.querySelector('.workspace-grid')) {
+                    if (selectedShape) {
+                        selectedShape.style.outline = 'none';
+                        selectedShape = null;
+                    }
+                    document.getElementById('no-selection').style.display = 'block';
+                    document.getElementById('shape-properties').style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
